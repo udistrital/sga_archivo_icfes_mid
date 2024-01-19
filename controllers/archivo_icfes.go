@@ -3,13 +3,14 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/astaxie/beego"
-	"github.com/udistrital/utils_oas/formatdata"
-	"github.com/udistrital/utils_oas/request"
 	"io/ioutil"
-	"sga_mid_archivo_icfes/models"
 	"strconv"
 	"strings"
+
+	"github.com/astaxie/beego"
+	"github.com/udistrital/sga_mid_archivo_icfes/models"
+	"github.com/udistrital/utils_oas/formatdata"
+	"github.com/udistrital/utils_oas/request"
 )
 
 // ArchivoIcfesController ...
