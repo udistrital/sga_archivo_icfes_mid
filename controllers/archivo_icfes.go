@@ -25,14 +25,14 @@ func (c *ArchivoIcfesController) URLMapping() {
 
 // PostArchivoIcfes ...
 // @Title PostArchivoIcfes
-// @Description Agregar ArchivoIcfes
-// @Param id path int	true "el id del periodo"
+// @Description Agrega el archivo icfes, recibe como parametro el id del periodo.
+// @Param id path int	true "id periodo"
 // @Param   archivo_icfes	formData  file	true   "body Agregar ArchivoIcfes content"
 // @Success 200 {}
 // @Failure 403 body is empty
-// @router /:id [post]
+// @router /archivos/:id_periodo [post]
 func (c *ArchivoIcfesController) PostArchivoIcfes() {
-	periodo_id := c.Ctx.Input.Param(":id")
+	periodo_id := c.Ctx.Input.Param(":id_periodo")
 	ArchivoIcfes := "Archivo procesado"
 	var alerta models.Alert
 	alertas := append([]interface{}{"Response:"})
