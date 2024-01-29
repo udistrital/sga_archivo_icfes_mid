@@ -46,6 +46,7 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 	if err != nil {
 		message = "err reading multipartFile" + err.Error()
 		statusCode = 400
+		c.Ctx.Output.SetStatus(statusCode)
 		c.Data["json"] = requestresponse.APIResponseDTO(false, statusCode, nil, message)
 		c.ServeJSON()
 		return
@@ -55,6 +56,7 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 		message = "err reading file" + err.Error()
 		statusCode = 400
 		logs.Error(message)
+		c.Ctx.Output.SetStatus(statusCode)
 		c.Data["json"] = requestresponse.APIResponseDTO(false, statusCode, nil, message)
 		c.ServeJSON()
 		return
@@ -66,6 +68,7 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 		message = "err in file content lentg"
 		logs.Error(message)
 		statusCode = 400
+		c.Ctx.Output.SetStatus(statusCode)
 		c.Data["json"] = requestresponse.APIResponseDTO(false, statusCode, nil, message)
 		c.ServeJSON()
 		return
@@ -75,6 +78,7 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 		message = "error in file content"
 		logs.Error(message)
 		statusCode = 400
+		c.Ctx.Output.SetStatus(statusCode)
 		c.Data["json"] = requestresponse.APIResponseDTO(false, statusCode, nil, message)
 		c.ServeJSON()
 		return
@@ -113,6 +117,7 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 			if errInscripciones != nil {
 				message = errInscripciones.Error()
 				statusCode = 400
+				c.Ctx.Output.SetStatus(statusCode)
 				c.Data["json"] = requestresponse.APIResponseDTO(false, statusCode, nil, message)
 				c.ServeJSON()
 			} else {
@@ -132,6 +137,7 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 						if errCriterios != nil {
 							message = errCriterios.Error()
 							statusCode = 400
+							c.Ctx.Output.SetStatus(statusCode)
 							c.Data["json"] = requestresponse.APIResponseDTO(false, statusCode, nil, message)
 							c.ServeJSON()
 						} else {
@@ -253,7 +259,7 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 		}
 
 	}
-
+	c.Ctx.Output.SetStatus(200)
 	c.Data["json"] = requestresponse.APIResponseDTO(false, statusCode, response, message)
 	c.ServeJSON()
 }
