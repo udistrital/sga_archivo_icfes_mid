@@ -18,3 +18,4 @@ swagger/lib/
 sga_mid.exe
 go.mod
 go.sum
+utils/swagger/
