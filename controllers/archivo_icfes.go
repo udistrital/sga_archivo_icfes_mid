@@ -1,14 +1,13 @@
 package controllers
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"strconv"
 	"strings"
 
 	"github.com/astaxie/beego"
 	"github.com/udistrital/sga_mid_archivo_icfes/models"
+	"github.com/udistrital/sga_mid_archivo_icfes/services"
 	"github.com/udistrital/utils_oas/formatdata"
 	"github.com/udistrital/utils_oas/request"
 )
@@ -40,22 +39,25 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 	fmt.Println("periodo", periodo_id)
 	multipartFile, _, err := c.GetFile("archivo_icfes")
 	if err != nil {
-		fmt.Println("err reading multipartFile", err)
-		alerta.Type = "error"
-		alerta.Code = "400"
-		alertas = append(alertas, "err reading file")
-		alerta.Body = alertas
+		services.ManejoError(&alerta, &alertas, "err reading multipartFile", err)
+		/*
+			fmt.Println("err reading multipartFile", err)
+			alerta.Type = "error"
+			alerta.Code = "400"
+			alertas = append(alertas, "err reading file")
+			alerta.Body = alertas*/
 		c.Data["json"] = alerta
 		c.ServeJSON()
 		return
 	}
 	file, err := ioutil.ReadAll(multipartFile)
 	if err != nil {
-		fmt.Println("err reading file", err)
+		services.ManejoError(&alerta, &alertas, "err reading file", err)
+		/*fmt.Println("err reading file", err)
 		alerta.Type = "error"
 		alerta.Code = "400"
 		alertas = append(alertas, "err reading file")
-		alerta.Body = alertas
+		alerta.Body = alertas*/
 		c.Data["json"] = alerta
 		c.ServeJSON()
 		return
@@ -64,22 +66,24 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 	// fmt.Println(lines)
 	//Probando que el archivo tenga el contenido necesario
 	if len(lines) < 2 {
-		fmt.Println("err in file content lentg")
+		services.ManejoError(&alerta, &alertas, "err in file content")
+		/*fmt.Println("err in file content lentg")
 		alerta.Type = "error"
 		alerta.Code = "400"
 		alertas = append(alertas, "err in file content")
-		alerta.Body = alertas
+		alerta.Body = alertas*/
 		c.Data["json"] = alerta
 		c.ServeJSON()
 		return
 	}
 	testHeaderFile := strings.Split(lines[0], ",")[0]
 	if testHeaderFile != "CODREGSNP" {
-		fmt.Println("err in file content")
+		services.ManejoError(&alerta, &alertas, "err in file content")
+		/*fmt.Println("err in file content")
 		alerta.Type = "error"
 		alerta.Code = "400"
 		alertas = append(alertas, "err in file content")
-		alerta.Body = alertas
+		alerta.Body = alertas*/
 		c.Data["json"] = alerta
 		c.ServeJSON()
 		return
@@ -116,10 +120,11 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 			var inscripcionesRes []map[string]interface{}
 			errInscripciones := request.GetJson("http://"+beego.AppConfig.String("InscripcionService")+"inscripcion_pregrado?limit=0&query=InscripcionId.Activo:true,InscripcionId.EstadoInscripcionId.Id:1,InscripcionId.PeriodoId:"+periodo_id+",CodigoIcfes:"+aspirante_codigo_icfes, &inscripcionesRes)
 			if errInscripciones != nil {
-				alertas = append(alertas, errInscripciones)
+				services.ManejoError(&alerta, &alertas, "", errInscripciones)
+				/*alertas = append(alertas, errInscripciones)
 				alerta.Body = alertas
 				alerta.Type = "error"
-				alerta.Code = "400"
+				alerta.Code = "400"*/
 				c.ServeJSON()
 			} else {
 				// fmt.Println("inscripciones", len(inscripcionesRes), inscripcionesRes)
@@ -136,10 +141,11 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 						// fmt.Println("url criterios", "http://"+beego.AppConfig.String("EvaluacionInscripcionService")+"/requisito_programa_academico?limit=0&query=Activo:true,RequisitoId__Activo:true,PeriodoId:"+periodo_id+",ProgramaAcademicoId:"+fmt.Sprintf("%.f", proyecto_inscripcion))
 						errCriterios := request.GetJson("http://"+beego.AppConfig.String("EvaluacionInscripcionService")+"/requisito_programa_academico?limit=0&query=Activo:true,RequisitoId__Activo:true,PeriodoId:"+periodo_id+",ProgramaAcademicoId:"+fmt.Sprintf("%.f", proyecto_inscripcion.(float64)), &criteriosRes)
 						if errCriterios != nil {
-							alertas = append(alertas, errCriterios)
+							services.ManejoError(&alerta, &alertas, "", errCriterios)
+							/*alertas = append(alertas, errCriterios)
 							alerta.Body = alertas
 							alerta.Type = "error"
-							alerta.Code = "400"
+							alerta.Code = "400"*/
 							c.ServeJSON()
 						} else {
 							// fmt.Println("criterios", criteriosRes)
@@ -147,7 +153,9 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 							// si existe criterios para el proyecto del aspirante revisar desde aqui
 							//Revisar el for no es necesarios ps ya se maneja un solo criterio para los subcriterios
 							var porcentajes map[string]interface{}
-							for _, criterioTemp := range criteriosRes {
+							services.AsignacionNotas(criteriosRes, porcentajes, aspirante_puntajes, &detallesEvaluacion, &evaluacionesInscripcion, proyecto_inscripcion, &aspirante_codigo_icfes, inscripcion)
+
+							/*for _, criterioTemp := range criteriosRes {
 								if criterioTemp["RequisitoId"] != nil {
 									// fmt.Println("criterio")
 									// formatdata.JsonPrint(criterioTemp["PorcentajeEspecifico"])
@@ -216,8 +224,7 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 									fmt.Println("no hay criterios para proyecto", proyecto_inscripcion, "para inscripcion", aspirante_codigo_icfes)
 								}
 
-							}
-
+							}*/
 						}
 
 					} else {
@@ -238,9 +245,10 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 		var resultadoevaluacion map[string]interface{}
 		errPostevaluacion := request.SendJson("http://"+beego.AppConfig.String("EvaluacionInscripcionService")+"/evaluacion_inscripcion", "POST", &resultadoevaluacion, postevaluacion)
 		if resultadoevaluacion["Type"] == "error" || errPostevaluacion != nil || resultadoevaluacion["Status"] == "404" || resultadoevaluacion["Message"] != nil {
-			alertas = append(alertas, resultadoevaluacion)
+			services.ManejoError(&alerta, &alertas, fmt.Sprintf("%v", resultadoevaluacion), errPostevaluacion)
+			/*alertas = append(alertas, resultadoevaluacion)
 			alerta.Type = "error"
-			alerta.Code = "400"
+			alerta.Code = "400"*/
 		} else {
 			detallesEvaluacion[i]["EvaluacionInscripcionId"] = map[string]interface{}{"Id": resultadoevaluacion["Id"].(float64)}
 
@@ -252,9 +260,10 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 		var resultadodetalle map[string]interface{}
 		errPostedetalle := request.SendJson("http://"+beego.AppConfig.String("EvaluacionInscripcionService")+"/detalle_evaluacion", "POST", &resultadodetalle, postdetalle)
 		if resultadodetalle["Type"] == "error" || errPostedetalle != nil || resultadodetalle["Status"] == "404" || resultadodetalle["Message"] != nil {
-			alertas = append(alertas, resultadodetalle)
+			services.ManejoError(&alerta, &alertas, fmt.Sprintf("%v", resultadodetalle), errPostedetalle)
+			/*alertas = append(alertas, resultadodetalle)
 			alerta.Type = "error"
-			alerta.Code = "400"
+			alerta.Code = "400"*/
 		} else {
 
 			alertas = append(alertas, ArchivoIcfes)
