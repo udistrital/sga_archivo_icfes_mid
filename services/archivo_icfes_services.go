@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/astaxie/beego"
 	"github.com/udistrital/sga_mid_archivo_icfes/models"
+	"github.com/udistrital/utils_oas/formatdata"
+	"github.com/udistrital/utils_oas/request"
 )
 
 func ManejoError(alerta *models.Alert, alertas *[]interface{}, mensaje string, err ...error) {
@@ -21,7 +24,7 @@ func ManejoError(alerta *models.Alert, alertas *[]interface{}, mensaje string, e
 	(*alerta).Code = "400"
 }
 
-func AsignacionNotas(criteriosRes []map[string]interface{}, porcentajes map[string]interface{}, aspirante_puntajes map[string]interface{}, detallesEvaluacion *[]map[string]interface{}, evaluacionesInscripcion *[]map[string]interface{}, proyecto_inscripcion interface{}, aspirante_codigo_icfes *string, inscripcion map[string]interface{}) {
+func asignacionNotas(criteriosRes []map[string]interface{}, porcentajes map[string]interface{}, aspirante_puntajes map[string]interface{}, detallesEvaluacion *[]map[string]interface{}, evaluacionesInscripcion *[]map[string]interface{}, proyecto_inscripcion interface{}, aspirante_codigo_icfes *string, inscripcion map[string]interface{}) {
 	for _, criterioTemp := range criteriosRes {
 		if criterioTemp["RequisitoId"] != nil {
 			// fmt.Println("criterio")
@@ -92,4 +95,83 @@ func AsignacionNotas(criteriosRes []map[string]interface{}, porcentajes map[stri
 		}
 
 	}
+}
+
+func ManejoPeticiones(evaluacionesInscripcion []map[string]interface{}, alerta *models.Alert, alertas *[]interface{}, detallesEvaluacion []map[string]interface{}, ArchivoIcfes string) {
+	manejoPeticionEvaluacion(evaluacionesInscripcion, alerta, alertas, &detallesEvaluacion)
+	manejoPeticionDetalle(detallesEvaluacion, alerta, alertas, ArchivoIcfes)
+}
+
+func manejoPeticionEvaluacion(evaluacionesInscripcion []map[string]interface{}, alerta *models.Alert, alertas *[]interface{}, detallesEvaluacion *[]map[string]interface{}) {
+	formatdata.JsonPrint(evaluacionesInscripcion)
+	for i, postevaluacion := range evaluacionesInscripcion {
+		var resultadoevaluacion map[string]interface{}
+		errPostevaluacion := request.SendJson("http://"+beego.AppConfig.String("EvaluacionInscripcionService")+"/evaluacion_inscripcion", "POST", &resultadoevaluacion, postevaluacion)
+		if resultadoevaluacion["Type"] == "error" || errPostevaluacion != nil || resultadoevaluacion["Status"] == "404" || resultadoevaluacion["Message"] != nil {
+			ManejoError(alerta, alertas, fmt.Sprintf("%v", resultadoevaluacion), errPostevaluacion)
+		} else {
+			(*detallesEvaluacion)[i]["EvaluacionInscripcionId"] = map[string]interface{}{"Id": resultadoevaluacion["Id"].(float64)}
+		}
+	}
+}
+
+func manejoPeticionDetalle(detallesEvaluacion []map[string]interface{}, alerta *models.Alert, alertas *[]interface{}, ArchivoIcfes string) {
+	formatdata.JsonPrint(detallesEvaluacion)
+	for _, postdetalle := range detallesEvaluacion {
+		var resultadodetalle map[string]interface{}
+		errPostedetalle := request.SendJson("http://"+beego.AppConfig.String("EvaluacionInscripcionService")+"/detalle_evaluacion", "POST", &resultadodetalle, postdetalle)
+		if resultadodetalle["Type"] == "error" || errPostedetalle != nil || resultadodetalle["Status"] == "404" || resultadodetalle["Message"] != nil {
+			ManejoError(alerta, alertas, fmt.Sprintf("%v", resultadodetalle), errPostedetalle)
+		} else {
+			*alertas = append(*alertas, ArchivoIcfes)
+		}
+	}
+}
+
+func peticionCriterio(inscripcionTemp map[string]interface{}, periodo_id string, alerta *models.Alert, alertas *[]interface{}, aspirante_puntajes map[string]interface{}, detallesEvaluacion *[]map[string]interface{}, evaluacionesInscripcion *[]map[string]interface{}, aspirante_codigo_icfes *string) bool {
+	// Extrae info de la inscripcion para saber el proyecto y la persona
+	inscripcion := inscripcionTemp["InscripcionId"].(map[string]interface{})
+	proyecto_inscripcion := inscripcion["ProgramaAcademicoId"]
+	// cargar criterios de admisión con el proyecto dependiendo de la inscripcion
+	var criteriosRes []map[string]interface{}
+	errCriterios := request.GetJson("http://"+beego.AppConfig.String("EvaluacionInscripcionService")+"/requisito_programa_academico?limit=0&query=Activo:true,RequisitoId__Activo:true,PeriodoId:"+periodo_id+",ProgramaAcademicoId:"+fmt.Sprintf("%.f", proyecto_inscripcion.(float64)), &criteriosRes)
+	if errCriterios != nil {
+		ManejoError(alerta, alertas, "", errCriterios)
+		return false
+	} else {
+		var porcentajes map[string]interface{}
+		asignacionNotas(criteriosRes, porcentajes, aspirante_puntajes, detallesEvaluacion, evaluacionesInscripcion, proyecto_inscripcion, aspirante_codigo_icfes, inscripcion)
+		return true
+	}
+}
+
+func PeticionInscripciones(recordFields []string, periodo_id string, alerta *models.Alert, alertas *[]interface{}, detallesEvaluacion *[]map[string]interface{}, evaluacionesInscripcion *[]map[string]interface{}) bool {
+	aspirante_codigo_icfes := recordFields[0]
+	aspirante_nombre := recordFields[1]
+	aspirante_puntajes := map[string]interface{}{
+		"PLC": recordFields[11],
+		"PMA": recordFields[12],
+		"PSC": recordFields[13],
+		"PCN": recordFields[14],
+		"PIN": recordFields[15],
+	}
+	fmt.Println("line", aspirante_codigo_icfes, aspirante_nombre, aspirante_puntajes)
+	// traer data de la inscripcion o inscripciones
+	var inscripcionesRes []map[string]interface{}
+	errInscripciones := request.GetJson("http://"+beego.AppConfig.String("InscripcionService")+"inscripcion_pregrado?limit=0&query=InscripcionId.Activo:true,InscripcionId.EstadoInscripcionId.Id:1,InscripcionId.PeriodoId:"+periodo_id+",CodigoIcfes:"+aspirante_codigo_icfes, &inscripcionesRes)
+	if errInscripciones != nil {
+		ManejoError(alerta, alertas, "", errInscripciones)
+		return false
+	} else {
+		for _, inscripcionTemp := range inscripcionesRes {
+			if inscripcionTemp["InscripcionId"] != nil {
+				if !peticionCriterio(inscripcionTemp, periodo_id, alerta, alertas, aspirante_puntajes, detallesEvaluacion, evaluacionesInscripcion, &aspirante_codigo_icfes) {
+					return false
+				}
+			} else {
+				fmt.Println("no hay inscripciones para ", aspirante_codigo_icfes)
+			}
+		}
+	}
+	return true
 }
