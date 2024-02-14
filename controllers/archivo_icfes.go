@@ -8,6 +8,7 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/udistrital/sga_mid_archivo_icfes/models"
 	"github.com/udistrital/sga_mid_archivo_icfes/services"
+	"github.com/udistrital/utils_oas/errorhandler"
 )
 
 // ArchivoIcfesController ...
@@ -29,6 +30,8 @@ func (c *ArchivoIcfesController) URLMapping() {
 // @Failure 403 body is empty
 // @router /:id [post]
 func (c *ArchivoIcfesController) PostArchivoIcfes() {
+	defer errorhandler.HandlePanic(&c.Controller)
+
 	periodo_id := c.Ctx.Input.Param(":id")
 	ArchivoIcfes := "Archivo procesado"
 	var alerta models.Alert
@@ -78,6 +81,7 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 		recordFields := strings.Split(line, ",")
 		if len(recordFields) > 1 {
 			if !services.PeticionInscripciones(recordFields, periodo_id, &alerta, &alertas, &detallesEvaluacion, &evaluacionesInscripcion) {
+				c.Ctx.Output.SetStatus(404)
 				c.ServeJSON()
 			}
 		}
@@ -85,6 +89,7 @@ func (c *ArchivoIcfesController) PostArchivoIcfes() {
 
 	services.ManejoPeticiones(evaluacionesInscripcion, &alerta, &alertas, detallesEvaluacion, ArchivoIcfes)
 
+	c.Ctx.Output.SetStatus(200)
 	alerta.Body = alertas
 	c.Data["json"] = alerta
 	c.ServeJSON()
