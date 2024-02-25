@@ -1,0 +1,40 @@
+swagger: "2.0"
+info:
+  title: beego Test API
+  description: beego has a very cool tools to autogenerate documents for your API
+  version: 1.0.0
+  termsOfService: http://beego.me/
+  contact:
+    email: astaxie@gmail.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+basePath: /v1
+paths:
+  /icfes/archivos/{id_periodo}:
+    post:
+      tags:
+      - icfes
+      description: Agrega el archivo icfes, recibe como parametro el id del periodo.
+      operationId: ArchivoIcfesController.PostArchivoIcfes
+      parameters:
+      - in: path
+        name: id
+        description: id periodo
+        required: true
+        type: integer
+        format: int64
+      - in: formData
+        name: archivo_icfes
+        description: body Agregar ArchivoIcfes content
+        required: true
+        type: file
+      responses:
+        "200":
+          description: '{}'
+        "403":
+          description: body is empty
+tags:
+- name: icfes
+  description: |
+    ArchivoIcfesController ...
