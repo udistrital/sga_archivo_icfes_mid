@@ -8,14 +8,17 @@
 package routers
 
 import (
-	"github.com/udistrital/sga_mid_archivo_icfes/controllers"
-
+	"github.com/udistrital/sga_archivo_icfes_mid/controllers"
+	"github.com/udistrital/utils_oas/errorhandler"
 	"github.com/astaxie/beego"
 )
 
 func init() {
+
+	beego.ErrorController(&errorhandler.ErrorHandlerController{})
+	
 	ns := beego.NewNamespace("/v1",
-		beego.NSNamespace("/archivo_icfes",
+		beego.NSNamespace("/icfes",
 			beego.NSInclude(
 				&controllers.ArchivoIcfesController{},
 			),

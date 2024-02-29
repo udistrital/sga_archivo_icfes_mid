@@ -15,18 +15,18 @@
     },
     "basePath": "/v1",
     "paths": {
-        "/archivo_icfes/{id}": {
+        "/icfes/archivos/{id_periodo}": {
             "post": {
                 "tags": [
-                    "archivo_icfes"
+                    "icfes"
                 ],
-                "description": "Agregar ArchivoIcfes",
+                "description": "Agrega el archivo icfes, recibe como parametro el id del periodo.",
                 "operationId": "ArchivoIcfesController.PostArchivoIcfes",
                 "parameters": [
                     {
                         "in": "path",
                         "name": "id",
-                        "description": "el id del periodo",
+                        "description": "id periodo",
                         "required": true,
                         "type": "integer",
                         "format": "int64"
@@ -52,7 +52,7 @@
     },
     "tags": [
         {
-            "name": "archivo_icfes",
+            "name": "icfes",
             "description": "ArchivoIcfesController ...\n"
         }
     ]
